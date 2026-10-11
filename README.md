@@ -1,10 +1,10 @@
 # Akins Shop Assistant — Etsy Seller MCP
 
+**Language:** English · [Türkçe](README.tr.md)
+
 Manage an Etsy shop from an MCP-capable assistant. The hosted seller connection lets each seller sign in to their own Etsy account, inspect shop data, create and improve draft listings, upload images, and review basic sales summaries. This repository contains the Cloudflare Worker behind that connection. It is an independent project, not an official Etsy or OpenAI product.
 
 > **Two separate things:** This GitHub repository is the source code. The hosted MCP server at `etsy.akins.app` is a running service. Making the source available does not make the service, your Etsy account, or your orders public. This repository does not contain production secrets, OAuth records, buyer data, demo product images, or the unfinished public-plugin submission package.
-
-**Türkçe hızlı başlangıç:** ChatGPT Plugins içinden özel MCP sunucusu ekleyip `https://etsy.akins.app/seller/mcp` adresini gir. OAuth ile kendi Etsy satıcı hesabına giriş yap; şifreni veya API anahtarını sohbete yazma. Önce “Bağlı mağazam hangisi?” diye sor, sonra taslaklarını ve siparişlerini görüntüle. İlan yayınlama, kalıcı silme ve siparişi gönderildi işaretleme bu MCP’de yok; bunları Etsy Shop Manager’da yap. Aşağıdaki bölümler tüm özellikleri ve kendi sunucunu kurma adımlarını açıklar.
 
 ## Try the hosted connection
 
