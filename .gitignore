@@ -1,0 +1,23 @@
+node_modules/
+.wrangler/
+dist/
+coverage/
+*.log
+*.sqlite*
+.DS_Store
+
+# Local Worker configuration and generated types may contain account-specific data.
+wrangler.jsonc
+worker-configuration.d.ts
+
+# Never commit credentials or local environment files.
+.dev.vars*
+.env*
+*.pem
+*.key
+*.p12
+.npmrc
+
+# Internal review drafts and product/demo media are not part of the source release.
+submission/
+assets/demo-*
