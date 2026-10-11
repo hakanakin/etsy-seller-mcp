@@ -2,11 +2,15 @@
 
 **Language:** English · [Türkçe](README.tr.md)
 
-Manage an Etsy shop from an MCP-capable assistant. The hosted seller connection lets each seller sign in to their own Etsy account, inspect shop data, create and improve draft listings, upload images, and review basic sales summaries. This repository contains the Cloudflare Worker behind that connection. It is an independent project, not an official Etsy or OpenAI product.
+Manage an Etsy shop from an MCP-capable assistant, including ChatGPT or Claude where remote MCP and OAuth connections are supported. Each seller signs in to their own Etsy account to inspect shop data, create and improve draft listings, upload supported files, and review basic sales summaries. This repository contains the Cloudflare Worker behind that connection. It is an independent project, not an official Etsy, OpenAI, or Anthropic product.
 
 > **Two separate things:** This GitHub repository is the source code. The hosted MCP server at `etsy.akins.app` is a running service. Making the source available does not make the service, your Etsy account, or your orders public. This repository does not contain production secrets, OAuth records, buyer data, demo product images, or the unfinished public-plugin submission package.
 
-## Try the hosted connection
+## Connect the hosted MCP server
+
+The authenticated server URL is **`https://etsy.akins.app/seller/mcp`**. It uses standard remote MCP over HTTPS with OAuth; the server is not limited to one AI company. Client support, tool presentation, file handling, and OAuth behavior can differ. The ChatGPT connection has been used for seller tasks; **a complete Claude sign-in and tool test has not yet been verified**.
+
+### ChatGPT
 
 If your ChatGPT account or workspace supports custom MCP plugins:
 
@@ -17,6 +21,17 @@ If your ChatGPT account or workspace supports custom MCP plugins:
 
 The exact screens and availability depend on your ChatGPT account or workspace. See [OpenAI's current connection guide](https://developers.openai.com/plugins/deploy/connect-chatgpt). This connection is not the same as a publicly listed plugin-directory release.
 
+### Claude
+
+Anthropic supports remote MCP through custom connectors. In a supported Claude account:
+
+1. Open **Customize → Connectors → + Add → Add custom connector**. On Team or Enterprise, an organization owner or authorized administrator must add the connector under **Organization settings → Connectors** first.
+2. Name it **Akins Shop Assistant** and enter `https://etsy.akins.app/seller/mcp` as the remote MCP URL.
+3. Review the detected authentication settings, choose an OAuth sign-in option (not “No sign in” for seller tools), and authorize **your own** Etsy seller account. Do not provide Etsy credentials as fixed request headers or in a chat.
+4. Connect or enable the connector for the conversation, then start with a read-only request such as “Which Etsy shop is connected?”
+
+Follow [Anthropic's current custom-connector guide](https://support.claude.com/en/articles/11175166-get-started-with-custom-connectors-using-remote-mcp) if the interface differs. Claude's remote connector is distinct from a local Claude Desktop MCP configuration. **Claude-specific OAuth, tool calls and file uploads still need end-to-end testing for this server.**
+
 Start with read-only questions. Confirm the shop shown by `get_connected_shop` before making changes. Examples:
 
 - “Which Etsy shop is connected, and what drafts do I have?”
@@ -25,7 +40,7 @@ Start with read-only questions. Confirm the shop shown by `get_connected_shop` b
 - “Help me create a draft listing; ask me for missing product facts first.”
 - “Add this attached image to my draft after I confirm the listing.”
 
-You can disconnect through `disconnect_shop` after confirming the connected shop ID. Also remove the connection in ChatGPT and revoke the app in Etsy's connected-app settings. See the hosted [support](https://etsy.akins.app/support) and [privacy](https://etsy.akins.app/privacy) pages.
+You can disconnect through `disconnect_shop` after confirming the connected shop ID. Also remove the connection in your MCP client (ChatGPT or Claude) and revoke the app in Etsy's connected-app settings. See the hosted [support](https://etsy.akins.app/support) and [privacy](https://etsy.akins.app/privacy) pages.
 
 ## What it can and cannot do
 
@@ -41,7 +56,7 @@ The authenticated seller server exposes **38 tools**. The separate public endpoi
 
 Publishing a listing, permanently deleting a listing, marking an order shipped, messaging buyers, running ads, and creating Etsy coupons or campaigns are **not available through this MCP**. Complete those actions in Etsy Shop Manager. Some supported writes can replace an entire inventory or personalization set: read the existing values and review the full replacement before approving it.
 
-For generated or attached ChatGPT images, prefer `upload_listing_image_file`. It accepts a ChatGPT-provided file reference, **not** a local path or arbitrary internet URL. `upload_listing_image` is a base64 fallback. The server checks allowed download hosts, file content and size; an upload can still fail if the temporary file reference is inaccessible or Etsy rejects the image.
+File handling is **client-specific**. In ChatGPT, generated or attached images can use `upload_listing_image_file`: its `openai/fileParams` metadata and download-host allowlist expect a ChatGPT-provided file reference, **not** a local path or arbitrary internet URL. Claude does not provide that ChatGPT file-reference contract, so do **not** assume direct Claude image/file uploads work through this tool. `upload_listing_image` is a base64 image fallback if your MCP client can supply the encoded bytes; it has not been validated end to end in Claude. The server checks allowed hosts, file content and size, and Etsy can still reject an upload.
 
 This project currently requests Etsy scopes `shops_r shops_w listings_r listings_w transactions_r`. Each seller grants access separately through Etsy OAuth. Commercial/API access for a different deployment is **not inherited** from this hosted service.
 
@@ -78,7 +93,7 @@ This section is for developers operating their **own** Etsy application and doma
    npx wrangler secret put ETSY_SHARED_SECRET
    ```
 
-   Never put secret values in a command argument, README, screenshot, commit, ChatGPT connection form, or `wrangler.jsonc`. Secret changes can create a new Worker version. Verify `https://YOUR_DOMAIN/health`, the public information pages, OAuth discovery, and a seller connection after setup. Do not point a fork at `etsy.akins.app` or reuse its Worker/KV resources.
+   Never put secret values in a command argument, README, screenshot, commit, MCP client connection form, or `wrangler.jsonc`. Secret changes can create a new Worker version. Verify `https://YOUR_DOMAIN/health`, the public information pages, OAuth discovery, and a seller connection after setup. Do not point a fork at `etsy.akins.app` or reuse its Worker/KV resources.
 
 6. Connect the seller MCP URL `https://YOUR_DOMAIN/seller/mcp` through a supported MCP client using OAuth. First test read-only calls; use a dedicated test shop before exercising draft writes. Each seller must authorize their own account.
 
@@ -91,7 +106,7 @@ The Worker's public pages are `/about`, `/support`, `/privacy` and `/terms`. The
 - Model/tool annotations and chat confirmation are **not** a hard human-approval boundary. Supported write tools can still change shop content. Publishing, permanent deletion and shipment are deliberately unavailable through the MCP. Review any proposed mutation yourself.
 - OAuth tokens are stored through the Cloudflare OAuth provider's KV-backed flow. This repository contains no live token store. The hosted service's data handling is explained in its [privacy policy](https://etsy.akins.app/privacy); self-hosters must publish their own accurate policy.
 - Public search has per-IP and per-Cloudflare-location rate limits. They mitigate abuse but are not a strict worldwide Etsy API quota.
-- Automated checks: `npm test` and `npm run typecheck`. A full second-seller login and all write-tool paths have **not** been verified end to end. Treat this as an actively developed integration, not a guarantee that every Etsy shop configuration will work.
+- Automated checks: `npm test` and `npm run typecheck`. A full second-seller login, Claude OAuth/tool journey, and all write-tool paths have **not** been verified end to end. Treat this as an actively developed integration, not a guarantee that every Etsy shop or MCP client configuration will work.
 
 If you find a security issue, follow [SECURITY.md](SECURITY.md) and avoid sending tokens or buyer data in a report.
 
@@ -111,9 +126,9 @@ If you find a security issue, follow [SECURITY.md](SECURITY.md) and avoid sendin
 
 - **OAuth redirect error:** Compare the callback registered with Etsy to `ETSY_REDIRECT_URI`, character for character. Check your Worker domain and the resource/issuer URLs in `src/seller.ts`.
 - **Missing binding or secret:** Check your local `wrangler.jsonc` for `OAUTH_KV` and both rate-limit bindings. Confirm both Etsy credentials were set as Worker secrets for the correct Worker; do not print their values.
-- **Image upload rejected:** Use `upload_listing_image_file` with a ChatGPT file reference, not a filesystem path. Confirm the file is still accessible, is an accepted image type, and meets Etsy's limits.
+- **Image upload rejected:** In ChatGPT, use `upload_listing_image_file` with a ChatGPT file reference, not a filesystem path. For Claude, that tool's ChatGPT-only file reference is unsupported; a client-supplied base64 payload via `upload_listing_image` may work but has not been verified. Check image type, size and Etsy's response.
 - **A tool says access is missing:** The seller may need to reconnect and approve the currently requested Etsy scopes. Do not add broader scopes without a concrete need.
 
 ## License
 
-Released under the [MIT License](LICENSE). Etsy, ChatGPT, OpenAI and Cloudflare are trademarks of their respective owners.
+Released under the [MIT License](LICENSE). Etsy, ChatGPT, OpenAI, Claude, Anthropic and Cloudflare are trademarks of their respective owners.

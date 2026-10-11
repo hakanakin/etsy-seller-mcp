@@ -2,11 +2,15 @@
 
 **Dil:** [English](README.md) · Türkçe
 
-Etsy mağazanızı MCP destekleyen bir asistan üzerinden yönetin. Barındırılan satıcı bağlantısı sayesinde her satıcı **kendi Etsy hesabıyla** giriş yapabilir; mağaza verilerini inceleyebilir, taslak ilan oluşturup düzenleyebilir, görsel yükleyebilir ve temel satış özetlerini görebilir. Bu depo, bağlantıyı sağlayan Cloudflare Worker'ın kaynak kodunu içerir. Etsy veya OpenAI'nin resmî ürünü değildir.
+Etsy mağazanızı, uzaktan MCP ve OAuth bağlantısını destekleyen ChatGPT veya Claude gibi bir asistan üzerinden yönetin. Her satıcı **kendi Etsy hesabıyla** giriş yaparak mağaza verilerini inceleyebilir, taslak ilan oluşturup düzenleyebilir, desteklenen dosyaları yükleyebilir ve temel satış özetlerini görebilir. Bu depo, bağlantıyı sağlayan Cloudflare Worker'ın kaynak kodunu içerir. Etsy, OpenAI veya Anthropic'in resmî ürünü değildir.
 
 > **Kaynak kod ile çalışan hizmet farklıdır:** Bu GitHub deposu yazılımın kodudur; `etsy.akins.app` adresindeki MCP sunucusu ise çalışan hizmettir. Kodun paylaşılması hizmeti, Etsy hesabınızı veya siparişlerinizi herkese açık hâle getirmez. Depoda canlı ortamın gizli anahtarları, OAuth kayıtları, alıcı bilgileri, demo ürün görselleri veya tamamlanmamış herkese açık eklenti başvuru paketi bulunmaz.
 
-## Hazır bağlantıyı kullanma
+## Barındırılan MCP sunucusuna bağlanma
+
+Kimlik doğrulamalı sunucu adresi **`https://etsy.akins.app/seller/mcp`**. HTTPS üzerinden standart uzaktan MCP ve OAuth kullanır; sunucu tek bir yapay zekâ şirketine özel değildir. İstemcilerin araçları sunma biçimi, dosya desteği ve OAuth davranışı farklılaşabilir. ChatGPT bağlantısı satıcı işlemlerinde kullanılmıştır; **Claude ile tam giriş ve araç akışı henüz doğrulanmamıştır**.
+
+### ChatGPT
 
 ChatGPT hesabınız veya çalışma alanınız özel MCP eklentilerini destekliyorsa:
 
@@ -17,6 +21,17 @@ ChatGPT hesabınız veya çalışma alanınız özel MCP eklentilerini destekliy
 
 Ekranlar ve erişim, ChatGPT hesabınıza veya çalışma alanı politikasına göre değişebilir. Güncel akış için [OpenAI'nin bağlantı rehberine](https://developers.openai.com/plugins/deploy/connect-chatgpt) bakın. Bu kişisel bağlantı, eklentinin herkese açık dizinde yayımlandığı anlamına gelmez.
 
+### Claude
+
+Anthropic, özel bağlayıcılar yoluyla uzaktan MCP'yi destekler. Uygun bir Claude hesabında:
+
+1. **Customize → Connectors → + Add → Add custom connector** yolunu açın. Team veya Enterprise hesabında önce kurum sahibi ya da yetkili yönetici **Organization settings → Connectors** üzerinden bağlayıcıyı eklemelidir.
+2. Ad olarak **Akins Shop Assistant**, uzaktan MCP adresi olarak `https://etsy.akins.app/seller/mcp` girin.
+3. Algılanan kimlik doğrulama ayarlarını inceleyin, satıcı araçları için “No sign in” yerine OAuth ile giriş seçin ve **kendi** Etsy satıcı hesabınızı yetkilendirin. Etsy bilgilerinizi sabit istek başlığına veya sohbete yazmayın.
+4. Bağlayıcıyı sohbet için etkinleştirip önce “Bağlı Etsy mağazam hangisi?” gibi salt okunur bir istekle başlayın.
+
+Ekranlar farklıysa [Anthropic'in güncel özel bağlayıcı rehberini](https://support.claude.com/en/articles/11175166-get-started-with-custom-connectors-using-remote-mcp) izleyin. Claude'un uzaktan bağlayıcısı, yerel Claude Desktop MCP yapılandırmasından farklıdır. **Bu sunucunun Claude'a özgü OAuth, araç çağrısı ve dosya yükleme akışı henüz uçtan uca test edilmemiştir.**
+
 Önce yalnızca okuma gerektiren isteklerle başlayın. Değişiklik yapmadan önce `get_connected_shop` sonucundaki mağazanın size ait olduğunu doğrulayın. Örnek sorular:
 
 - “Hangi Etsy mağazam bağlı ve hangi taslak ilanlarım var?”
@@ -25,7 +40,7 @@ Ekranlar ve erişim, ChatGPT hesabınıza veya çalışma alanı politikasına g
 - “Bir taslak ilan hazırlamama yardım et; eksik ürün bilgilerini önce bana sor.”
 - “Onayladığım taslağa eklediğim görseli yükle.”
 
-Bağlantıyı kaldırmak için bağlı mağaza kimliğini doğrulayıp `disconnect_shop` aracını kullanabilirsiniz. Ayrıca ChatGPT'deki bağlantıyı kaldırın ve Etsy'nin bağlı uygulama ayarlarından erişimi iptal edin. Ayrıntılar için [destek](https://etsy.akins.app/support) ve [gizlilik](https://etsy.akins.app/privacy) sayfalarına bakın.
+Bağlantıyı kaldırmak için bağlı mağaza kimliğini doğrulayıp `disconnect_shop` aracını kullanabilirsiniz. Ayrıca kullandığınız MCP istemcisindeki (ChatGPT veya Claude) bağlantıyı kaldırın ve Etsy'nin bağlı uygulama ayarlarından erişimi iptal edin. Ayrıntılar için [destek](https://etsy.akins.app/support) ve [gizlilik](https://etsy.akins.app/privacy) sayfalarına bakın.
 
 ## Yapabildikleri ve sınırları
 
@@ -41,7 +56,7 @@ Kimlik doğrulamalı satıcı sunucusunda **38 araç** bulunur. Ayrı bir uç no
 
 İlan yayımlama, ilanı kalıcı silme, siparişi “gönderildi” işaretleme, alıcılara mesaj gönderme, reklam yönetimi ve Etsy kupon/kampanya oluşturma **bu MCP üzerinden yapılamaz**. Bu işlemleri Etsy Shop Manager'da tamamlayın. Desteklenen bazı yazma araçları tüm stok veya kişiselleştirme listesini değiştirebilir: onaylamadan önce mevcut değerleri okuyup yeni listenin tamamını gözden geçirin.
 
-ChatGPT'de oluşturulan veya eklenen görseller için `upload_listing_image_file` tercih edilir. Bu araç ChatGPT'nin sağladığı **dosya referansını** kabul eder; yerel dosya yolu veya rastgele internet adresi kabul etmez. `upload_listing_image`, base64 yedek yoludur. Sunucu izin verilen indirme alan adını, dosya içeriğini ve boyutunu kontrol eder; geçici dosya erişilemezse veya Etsy reddederse yükleme yine başarısız olabilir.
+Dosya yükleme **istemciye özgüdür**. ChatGPT'de oluşturulan veya eklenen görseller için `upload_listing_image_file` kullanılabilir: `openai/fileParams` meta verisi ve indirme alan adı izin listesi ChatGPT'nin verdiği **dosya referansını** bekler; yerel dosya yolu veya rastgele internet adresi kabul etmez. Claude bu ChatGPT dosya referansı biçimini sağlamaz; bu araçla Claude'dan doğrudan görsel/dosya yüklenebileceğini varsaymayın. MCP istemcisi kodlanmış baytları gönderebiliyorsa `upload_listing_image` base64 yedek yoludur; Claude'da uçtan uca doğrulanmamıştır. Sunucu dosya içeriği/boyutunu kontrol eder; Etsy yüklemeyi yine reddedebilir.
 
 Uygulama şu Etsy izinlerini ister: `shops_r shops_w listings_r listings_w transactions_r`. Her satıcı kendi Etsy OAuth akışıyla ayrıca izin verir. Barındırılan hizmete verilmiş Commercial/API erişimi, başka birinin kuracağı sunucuya **aktarılmaz**.
 
@@ -78,7 +93,7 @@ Bu bölüm **kendi** Etsy uygulamasını ve alan adını kullanan geliştiricile
    npx wrangler secret put ETSY_SHARED_SECRET
    ```
 
-   Gizli değerleri komut argümanına, README'ye, ekran görüntüsüne, commit'e, ChatGPT bağlantı formuna veya `wrangler.jsonc` içine yazmayın. Secret değişiklikleri yeni Worker sürümü oluşturabilir. Kurulumdan sonra `https://ALAN_ADINIZ/health`, bilgi sayfaları, OAuth keşfi ve bir satıcı bağlantısını doğrulayın. Fork'unuzu `etsy.akins.app` adresine yönlendirmeyin veya onun Worker/KV kaynaklarını kullanmayın.
+   Gizli değerleri komut argümanına, README'ye, ekran görüntüsüne, commit'e, MCP istemcisinin bağlantı formuna veya `wrangler.jsonc` içine yazmayın. Secret değişiklikleri yeni Worker sürümü oluşturabilir. Kurulumdan sonra `https://ALAN_ADINIZ/health`, bilgi sayfaları, OAuth keşfi ve bir satıcı bağlantısını doğrulayın. Fork'unuzu `etsy.akins.app` adresine yönlendirmeyin veya onun Worker/KV kaynaklarını kullanmayın.
 
 6. `https://ALAN_ADINIZ/seller/mcp` adresini OAuth destekleyen bir MCP istemcisine bağlayın. Önce okuma araçlarını deneyin; taslak yazma işlemleri için ayrı bir test mağazası kullanın. Her satıcı kendi hesabını ayrı ayrı yetkilendirmelidir.
 
@@ -91,7 +106,7 @@ Herkese açık bilgi sayfaları `/about`, `/support`, `/privacy` ve `/terms` yol
 - Araç açıklamaları ve sohbet içi onay, **kesin bir insan onayı güvenlik sınırı değildir**. Desteklenen yazma araçları mağaza içeriğini değiştirebilir. Yayımlama, kalıcı silme ve gönderim işaretleme özellikle MCP dışında bırakılmıştır. Önerilen her değişikliği kendiniz inceleyin.
 - OAuth belirteçleri Cloudflare OAuth sağlayıcısının KV destekli akışıyla tutulur; bu depo canlı belirteç deposunu içermez. Barındırılan hizmetin veri uygulamaları [gizlilik politikasında](https://etsy.akins.app/privacy) anlatılır. Kendi sunucusunu işletenler doğru bir politika yayımlamalıdır.
 - Açık arama IP ve Cloudflare konumu bazında sınırlandırılır. Bu, kötüye kullanımı azaltır ancak dünya genelinde kesin bir Etsy API kotası değildir.
-- Otomatik kontroller: `npm test` ve `npm run typecheck`. İkinci satıcıyla tam giriş akışı ve tüm yazma araçları **henüz uçtan uca doğrulanmadı**. Bu, aktif geliştirilen bir entegrasyondur; her Etsy mağaza yapılandırmasının çalışacağı garantisi yoktur.
+- Otomatik kontroller: `npm test` ve `npm run typecheck`. İkinci satıcıyla tam giriş, Claude OAuth/araç akışı ve tüm yazma araçları **henüz uçtan uca doğrulanmadı**. Bu, aktif geliştirilen bir entegrasyondur; her Etsy mağazası veya MCP istemcisi yapılandırmasının çalışacağı garantisi yoktur.
 
 Bir güvenlik açığı bulursanız [SECURITY.md](SECURITY.md) dosyasındaki özel bildirim yolunu kullanın; belirteç veya alıcı verisi göndermeyin.
 
@@ -111,9 +126,9 @@ Bir güvenlik açığı bulursanız [SECURITY.md](SECURITY.md) dosyasındaki öz
 
 - **OAuth dönüş adresi hatası:** Etsy'ye kaydettiğiniz adresi `ETSY_REDIRECT_URI` ile karakter karakter karşılaştırın. Worker alan adını ve `src/seller.ts` içindeki kaynak/yetkilendirme adreslerini kontrol edin.
 - **Bağlama veya secret eksik:** Yerel `wrangler.jsonc` dosyanızda `OAUTH_KV` ve iki hız sınırı bağlamasının bulunduğunu kontrol edin. İki Etsy bilgisinin de doğru Worker için secret olarak kaydedildiğini doğrulayın; değerleri ekrana basmayın.
-- **Görsel yükleme reddedildi:** `upload_listing_image_file` aracına yerel dosya yolu değil, ChatGPT dosya referansı verin. Dosyanın hâlâ erişilebilir ve kabul edilen görsel türü/boyutunda olduğunu kontrol edin.
+- **Görsel yükleme reddedildi:** ChatGPT'de `upload_listing_image_file` aracına yerel dosya yolu değil, ChatGPT dosya referansı verin. Claude'da bu araca özel ChatGPT referansı desteklenmez; istemcinin sağladığı base64 verisiyle `upload_listing_image` olası bir yoldur ancak doğrulanmamıştır. Görsel türünü, boyutu ve Etsy yanıtını kontrol edin.
 - **Araç yetki eksik diyor:** Satıcının yeniden bağlanıp istenen Etsy izinlerini onaylaması gerekebilir. Somut ihtiyaç olmadan daha geniş izin eklemeyin.
 
 ## Lisans
 
-[MIT Lisansı](LICENSE) altında yayımlanır. Etsy, ChatGPT, OpenAI ve Cloudflare adları ilgili sahiplerinin ticari markalarıdır.
+[MIT Lisansı](LICENSE) altında yayımlanır. Etsy, ChatGPT, OpenAI, Claude, Anthropic ve Cloudflare adları ilgili sahiplerinin ticari markalarıdır.
