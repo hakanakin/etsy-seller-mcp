@@ -1,54 +1,119 @@
-# Etsy seller MCP
+# Akins Shop Assistant — Etsy Seller MCP
 
-Open-source Cloudflare Worker powering Akins Shop Assistant. Source code is licensed under [MIT](LICENSE). This repository does not include the live service's secrets, OAuth records, private Cloudflare configuration, product images, or public-directory submission draft.
+Manage an Etsy shop from an MCP-capable assistant. The hosted seller connection lets each seller sign in to their own Etsy account, inspect shop data, create and improve draft listings, upload images, and review basic sales summaries. This repository contains the Cloudflare Worker behind that connection. It is an independent project, not an official Etsy or OpenAI product.
 
-ChatGPT seller connection: `https://etsy.akins.app/seller/mcp`.
+> **Two separate things:** This GitHub repository is the source code. The hosted MCP server at `etsy.akins.app` is a running service. Making the source available does not make the service, your Etsy account, or your orders public. This repository does not contain production secrets, OAuth records, buyer data, demo product images, or the unfinished public-plugin submission package.
 
-The existing public, read-only search remains at `https://etsy.akins.app/mcp`.
+**Türkçe hızlı başlangıç:** ChatGPT Plugins içinden özel MCP sunucusu ekleyip `https://etsy.akins.app/seller/mcp` adresini gir. OAuth ile kendi Etsy satıcı hesabına giriş yap; şifreni veya API anahtarını sohbete yazma. Önce “Bağlı mağazam hangisi?” diye sor, sonra taslaklarını ve siparişlerini görüntüle. İlan yayınlama, kalıcı silme ve siparişi gönderildi işaretleme bu MCP’de yok; bunları Etsy Shop Manager’da yap. Aşağıdaki bölümler tüm özellikleri ve kendi sunucunu kurma adımlarını açıklar.
 
-## Setup
+## Try the hosted connection
 
-For a separate deployment, run `npm ci`, copy `wrangler.example.jsonc` to `wrangler.jsonc`, and replace the example domain, Worker name, and KV namespace ID with your own. Register that exact callback URL in your own Etsy Developer application. Change the Akins-specific OAuth resource/issuer URLs in `src/seller.ts` and the publisher, support, privacy, and terms text in `src/site.ts` to match your service before offering it to users. Do not deploy the example configuration unchanged or deploy from this checkout against the Akins production Worker.
+If your ChatGPT account or workspace supports custom MCP plugins:
 
-Set `ETSY_KEYSTRING` and `ETSY_SHARED_SECRET` as Cloudflare Worker secrets, never in source control. `npm run typecheck` regenerates the ignored `worker-configuration.d.ts` from your local config. Run `npm test` and `npx wrangler deploy --dry-run` before any deployment. The local `.wrangler/` state may contain OAuth test data and is excluded from Git.
+1. In [ChatGPT Plugins](https://chatgpt.com/plugins), choose **Add custom MCP server**.
+2. Name it **Akins Shop Assistant** and enter the seller URL: `https://etsy.akins.app/seller/mcp`.
+3. Choose the offered OAuth connection, review the permissions, and sign in to **your own** Etsy seller account. Do not paste your Etsy password, API key, or shared secret into a chat.
+4. Install the new personal plugin. In a new Work conversation, select it with `@` and ask, for example, “Show my draft listings.”
 
-1. In Etsy Developer, register the exact OAuth redirect URI `https://etsy.akins.app/etsy/callback` for the approved application. The Worker uses the same URI in `wrangler.jsonc`.
-2. Keep `ETSY_KEYSTRING` and `ETSY_SHARED_SECRET` as Cloudflare Worker secrets. Never put them in ChatGPT connection settings, source control, or a screenshot. The app key identifies the integration; individual sellers authenticate through Etsy OAuth.
-3. In ChatGPT developer mode, create a custom MCP app using `https://etsy.akins.app/seller/mcp` and OAuth. During setup, each seller grants Etsy access to their own shop. The server derives the seller's user and shop ID from Etsy's token, not from a tool argument.
-4. Test with a seller account: connect; call `get_connected_shop`; list orders and drafts; create a throwaway draft; update it; upload an image; confirm all data belongs to that seller. Repeat with a second seller account before publishing beyond private testing. A draft creation was verified on the publisher's shop; a second-seller test remains outstanding.
+The exact screens and availability depend on your ChatGPT account or workspace. See [OpenAI's current connection guide](https://developers.openai.com/plugins/deploy/connect-chatgpt). This connection is not the same as a publicly listed plugin-directory release.
 
-## Tool coverage
+Start with read-only questions. Confirm the shop shown by `get_connected_shop` before making changes. Examples:
 
-The seller server exposes 38 focused tools:
+- “Which Etsy shop is connected, and what drafts do I have?”
+- “How many paid orders were created today? Use my timezone and do not invent sales.”
+- “Review this draft and tell me what is missing before I publish it myself.”
+- “Help me create a draft listing; ask me for missing product facts first.”
+- “Add this attached image to my draft after I confirm the listing.”
 
-- Shop: `get_connected_shop`, `get_shop_details`, `update_shop_marketing_text`, `list_shop_reviews`, `list_shipping_profiles`, `list_processing_profiles`, `list_return_policies`, `list_shop_sections`, `create_shop_section`, `rename_shop_section`, `disconnect_shop`.
-- Orders: `list_orders` (date, paid/shipped filters), `get_order`, `get_order_items`, `list_shop_transactions`.
-- Marketing: `get_marketing_sales_summary`, `get_listing_sales_summary`, `search_public_listings_for_research`, `audit_listing_marketing`. These read-only tools return aggregated seller data or public listings; they do not create promotions. The report tools scan at most five pages and explicitly mark incomplete coverage. Order totals are not profit or ad attribution. Public search is not keyword volume.
-- Listings: `list_shop_listings`, `get_shop_listing`, `list_listing_reviews`, `get_listing_inventory`, `set_draft_listing_inventory`, `list_listing_images`, `search_seller_taxonomy`, `get_taxonomy_properties`, `get_listing_properties`, `set_draft_listing_property`, `get_listing_personalization`, `set_draft_listing_personalization`, `list_listing_files`, `audit_listing_draft`, `create_draft_listing`, `update_listing`, `upload_listing_image`, `upload_listing_image_file`, `upload_digital_listing_file`.
-Shop text and section writes require Etsy's `shops_w` scope. Existing ChatGPT-connected sellers may need to reconnect to grant it. Publication, permanent deletion and marking an order shipped are not exposed through this MCP; sellers perform those actions in Etsy Shop Manager. The tools reject calls without the granted scopes. Etsy Open API has no documented coupon, sale-campaign, targeted-offer, Etsy Ads management, or Etsy Stats traffic endpoint, so those are not offered as executable tools. Sellers configure those in Etsy's Shop Manager.
+You can disconnect through `disconnect_shop` after confirming the connected shop ID. Also remove the connection in ChatGPT and revoke the app in Etsy's connected-app settings. See the hosted [support](https://etsy.akins.app/support) and [privacy](https://etsy.akins.app/privacy) pages.
 
-The new read tools use the existing Etsy OAuth scopes. Reviews are read-only; Etsy's Open API does not expose a reply-to-review endpoint. The server does not offer an arbitrary Etsy API proxy or arbitrary URL fetching.
+## What it can and cannot do
 
-`disconnect_shop` requires the connected shop ID as an explicit confirmation and revokes this Etsy user's grants in the service. It does not revoke access from Etsy's own connected-app settings or remove the connection in ChatGPT; users should do both separately. Do not test this tool on a live account unless the owner actually intends to disconnect it.
+The authenticated seller server exposes **38 tools**. The separate public endpoint at `https://etsy.akins.app/mcp` offers only public listing search and single-listing lookup; it has no access to private seller data.
 
-Public listing pages: `/about`, `/support`, `/privacy`, `/terms`. This source release does not include the unfinished public-directory submission package.
+| Area | Supported actions | Important limits |
+| --- | --- | --- |
+| Shop | Read shop details, reviews, shipping/processing profiles, return policies and sections; edit marketing text and sections | Text/section edits need Etsy's `shops_w` permission |
+| Orders | List and inspect the connected seller's receipts and items | Buyer/order content is private and must be treated as untrusted data |
+| Listings | Browse listings, taxonomy, attributes, inventory, personalization, images and digital files | Listing reads and writes check that the item belongs to the connected shop |
+| Drafts | Create drafts, edit supported fields, tags and materials; upload listing images or digital buyer files; run a basic draft checklist | A draft is **not** published; the checklist is not Etsy's final validation |
+| Sales and research | Basic paid-order totals, listing sales summaries, public listing research and marketing checks | No profit, ad attribution, traffic, keyword-volume or conversion-rate claim |
 
-`create_draft_listing` does not publish. `update_listing` rejects `state=active`; review and publish in Etsy Shop Manager. `upload_listing_image` remains the base64 fallback. For ChatGPT, use `upload_listing_image_file`: its `file` parameter is declared with `_meta["openai/fileParams"]` so the host can supply a temporary file URL and opaque file ID for an attached/generated image. A local file path alone is not sufficient. The Worker permits only known ChatGPT file hosts, including the exact Azure Blob hostname observed for generated images; it rejects redirects, checks image bytes and limits downloads to 6 MB. Etsy can impose stricter limits. Live-tested on 2026-10-03: ChatGPT generated an image, uploaded it to a draft, and `list_listing_images` returned one image.
+Publishing a listing, permanently deleting a listing, marking an order shipped, messaging buyers, running ads, and creating Etsy coupons or campaigns are **not available through this MCP**. Complete those actions in Etsy Shop Manager. Some supported writes can replace an entire inventory or personalization set: read the existing values and review the full replacement before approving it.
 
-`create_draft_listing` accepts optional tags, materials, styles, section, tax and auto-renew choices; `update_listing` accepts these for full replacement. Read the current listing and merge list fields before adding one item; omitting them leaves them unchanged. Up to 13 unique tags are allowed, each no longer than 20 characters. The Worker sends Etsy's form-encoded comma-separated value. An empty array requests removal of all tags.
+For generated or attached ChatGPT images, prefer `upload_listing_image_file`. It accepts a ChatGPT-provided file reference, **not** a local path or arbitrary internet URL. `upload_listing_image` is a base64 fallback. The server checks allowed download hosts, file content and size; an upload can still fail if the temporary file reference is inaccessible or Etsy rejects the image.
 
-Etsy now permits physical drafts before shipping and processing profiles are set. Publication still needs the applicable shipping/profile/policy data. Calculated shipping profiles may also require weight, dimensions and units. The draft tool accepts these fields and returns Etsy's validation message for invalid requests.
+This project currently requests Etsy scopes `shops_r shops_w listings_r listings_w transactions_r`. Each seller grants access separately through Etsy OAuth. Commercial/API access for a different deployment is **not inherited** from this hosted service.
 
-For a complete draft: search category IDs, inspect category properties, create the draft using seller-provided product facts, attach images and (for instant digital listings) actual buyer files, configure properties/variations/personalization, then run `audit_listing_draft` and have the seller review Etsy's editor before publishing. Inventory and personalization tools replace whole sets, are draft-only, and require explicit approval. The audit is a basic checklist, not Etsy's final validation or a guarantee of legal compliance. Digital file upload and the complex write tools need a separate live seller-authorized test; no buyer file or variation was changed as part of this audit.
+## Self-host on Cloudflare Workers
 
-## Security and limitations
+This section is for developers operating their **own** Etsy application and domain. It does not change the hosted Akins service. You need a Cloudflare account, a domain on Cloudflare for the custom Worker hostname, an Etsy Developer app with the required access, and a supported Node.js/npm environment. Read [Etsy's OAuth documentation](https://developers.etsy.com/documentation/essentials/authentication/) before connecting real sellers.
 
-- Seller tools require an OAuth bearer token with `etsy:manage`; the public search endpoint has no seller access.
-- Shop IDs are derived server-side from the authorized Etsy identity. Listing reads and writes check ownership before acting.
-- All Etsy API paths are fixed by the server. Listing descriptions, order notes, and customer messages are data, never instructions or URLs to fetch.
-- Token storage, browser-bound consent, PKCE and refresh are handled by the Cloudflare OAuth provider and the Etsy OAuth flow. Do not log bearer or Etsy tokens.
-- Tool annotations label mutations, but model-level confirmation is not a hard security boundary. Publication, deletion and shipment are unavailable through this MCP. Other write tools, including inventory replacement and shop text, still rely on model-level confirmation and should be reviewed by the seller; a hard approval gate for those remains future work.
-- The public read-only MCP search is limited per caller IP and per Cloudflare location. This is abuse mitigation, not a strict global Etsy quota; Cloudflare's rate-limit counters are eventually consistent.
-- `npm test` covers ownership checks and public-rate-limit rejection. A full two-seller login and all write-tool tests remain outstanding.
+1. Install dependencies and sign in to your Cloudflare account:
 
-To verify code locally: `npm run typecheck`. To deploy from this directory: `npm run deploy`.
+   ```sh
+   npm ci
+   npx wrangler login
+   ```
+
+2. Copy `wrangler.example.jsonc` to `wrangler.jsonc`. The latter is intentionally Git-ignored. Set a **new** Worker name, your domain and exact `ETSY_REDIRECT_URI`. Create a Cloudflare Workers KV namespace for the `OAUTH_KV` binding, then replace `REPLACE_WITH_YOUR_KV_NAMESPACE_ID` with its ID. Give each rate-limit binding a positive-integer `namespace_id` unique within **your** Cloudflare account if you do not want to share counters with another Worker. The sample IDs are examples, not resources that this repository owns. See [Cloudflare KV commands](https://developers.cloudflare.com/workers/wrangler/commands/kv/) and [rate-limit bindings](https://developers.cloudflare.com/workers/runtime-apis/bindings/rate-limit/).
+
+3. Replace the Akins-specific OAuth resource and authorization-server URLs in `src/seller.ts`. Update the publisher identity, contact address, privacy policy and terms in `src/site.ts` to reflect **your actual service and data practices**. Do not copy Akins's legal/contact text as your own. Register your exact `https://YOUR_DOMAIN/etsy/callback` URI in your Etsy Developer app; Etsy requires an exact redirect match.
+
+4. Validate before deploying:
+
+   ```sh
+   npm run typecheck
+   npm test
+   npx wrangler deploy --dry-run
+   ```
+
+   `npm run typecheck` generates `worker-configuration.d.ts` from your local Worker config. That generated file is ignored by Git. The tests currently cover ownership checks and the public rate-limit rejection paths; they do **not** replace an end-to-end two-seller OAuth or write-tool test.
+
+5. Deploy the Worker, then set your Etsy app credentials as Cloudflare Worker secrets using Wrangler's **interactive prompts**:
+
+   ```sh
+   npm run deploy
+   npx wrangler secret put ETSY_KEYSTRING
+   npx wrangler secret put ETSY_SHARED_SECRET
+   ```
+
+   Never put secret values in a command argument, README, screenshot, commit, ChatGPT connection form, or `wrangler.jsonc`. Secret changes can create a new Worker version. Verify `https://YOUR_DOMAIN/health`, the public information pages, OAuth discovery, and a seller connection after setup. Do not point a fork at `etsy.akins.app` or reuse its Worker/KV resources.
+
+6. Connect the seller MCP URL `https://YOUR_DOMAIN/seller/mcp` through a supported MCP client using OAuth. First test read-only calls; use a dedicated test shop before exercising draft writes. Each seller must authorize their own account.
+
+The Worker's public pages are `/about`, `/support`, `/privacy` and `/terms`. The read-only public search MCP is `/mcp`; the authenticated seller MCP is `/seller/mcp`. The OAuth callback is `/etsy/callback`.
+
+## Safety, privacy and project status
+
+- The seller MCP requires OAuth with the `etsy:manage` scope. Seller/shop identity comes from the authorized Etsy session, not a model-supplied shop ID. Listing and receipt ownership checks protect item-level reads and writes.
+- Etsy descriptions, reviews, order notes and buyer text may contain instructions. They are **data**, not instructions to the assistant. The server exposes fixed Etsy API paths and does not fetch arbitrary URLs from that content.
+- Model/tool annotations and chat confirmation are **not** a hard human-approval boundary. Supported write tools can still change shop content. Publishing, permanent deletion and shipment are deliberately unavailable through the MCP. Review any proposed mutation yourself.
+- OAuth tokens are stored through the Cloudflare OAuth provider's KV-backed flow. This repository contains no live token store. The hosted service's data handling is explained in its [privacy policy](https://etsy.akins.app/privacy); self-hosters must publish their own accurate policy.
+- Public search has per-IP and per-Cloudflare-location rate limits. They mitigate abuse but are not a strict worldwide Etsy API quota.
+- Automated checks: `npm test` and `npm run typecheck`. A full second-seller login and all write-tool paths have **not** been verified end to end. Treat this as an actively developed integration, not a guarantee that every Etsy shop configuration will work.
+
+If you find a security issue, follow [SECURITY.md](SECURITY.md) and avoid sending tokens or buyer data in a report.
+
+## Repository map
+
+| Path | Purpose |
+| --- | --- |
+| `src/seller.ts` | Seller OAuth, Etsy API calls and authenticated MCP tools |
+| `src/index.ts` | Public read-only MCP and health endpoint |
+| `src/site.ts` | Hosted informational and legal pages |
+| `src/ownership.ts` | Shop/receipt ownership checks |
+| `tests/` | Current automated tests |
+| `wrangler.example.jsonc` | Copy-and-customize Worker configuration |
+| `LICENSE`, `SECURITY.md` | MIT license and private vulnerability reporting |
+
+## Troubleshooting
+
+- **OAuth redirect error:** Compare the callback registered with Etsy to `ETSY_REDIRECT_URI`, character for character. Check your Worker domain and the resource/issuer URLs in `src/seller.ts`.
+- **Missing binding or secret:** Check your local `wrangler.jsonc` for `OAUTH_KV` and both rate-limit bindings. Confirm both Etsy credentials were set as Worker secrets for the correct Worker; do not print their values.
+- **Image upload rejected:** Use `upload_listing_image_file` with a ChatGPT file reference, not a filesystem path. Confirm the file is still accessible, is an accepted image type, and meets Etsy's limits.
+- **A tool says access is missing:** The seller may need to reconnect and approve the currently requested Etsy scopes. Do not add broader scopes without a concrete need.
+
+## License
+
+Released under the [MIT License](LICENSE). Etsy, ChatGPT, OpenAI and Cloudflare are trademarks of their respective owners.

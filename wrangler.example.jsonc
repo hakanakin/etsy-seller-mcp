@@ -18,7 +18,7 @@
     { "binding": "OAUTH_KV", "id": "REPLACE_WITH_YOUR_KV_NAMESPACE_ID" }
   ],
   "ratelimits": [
-    { "name": "PUBLIC_SEARCH_LIMIT", "namespace_id": "26021101", "simple": { "limit": 30, "period": 60 } },
-    { "name": "PUBLIC_SEARCH_GLOBAL_LIMIT", "namespace_id": "26021102", "simple": { "limit": 120, "period": 60 } }
+    { "name": "PUBLIC_SEARCH_LIMIT", "namespace_id": "1001", "simple": { "limit": 30, "period": 60 } },
+    { "name": "PUBLIC_SEARCH_GLOBAL_LIMIT", "namespace_id": "1002", "simple": { "limit": 120, "period": 60 } }
   ]
 }
